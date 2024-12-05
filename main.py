@@ -1,4 +1,62 @@
 import random
+import math
+import numpy
+import time
+
+class Classifier:
+    def __init__(self):
+        self.training_data = [[]]
+        self.feature_maxes = []
+
+    def train(self, training_data: list[list]):
+        self.training_data = training_data
+
+    def normalize(self):
+        for feature in range(1, len(self.training_data[0])):
+            curr_max = self.training_data[0][feature]
+            for curr_point in self.training_data:
+                if curr_point[feature] > curr_max:
+                    curr_max = curr_point[feature]
+            self.feature_maxes.append(curr_max)
+            for curr_point in self.training_data:
+                curr_point[feature] = curr_point[feature] / curr_max
+
+    def test(self, point, features):
+        distances = []
+
+        for test_point in self.training_data:
+            sum = 0
+            for i in range(len(point)):
+                if i in features:
+                    sum += (point[i] - test_point[i + 1])**2
+            distances.append(math.sqrt(sum))
+        min_index = numpy.argmin(distances)
+        return self.training_data[min_index][0]
+
+class Validator:
+    def validate(self, numbers, features):
+        right = 0
+        wrong = 0
+
+        classifier = Classifier()
+        for i in range(len(numbers)):
+            start_time = time.time()
+            curr_testdata = numbers.copy()
+            del curr_testdata[i]
+            classifier.train(curr_testdata)
+            curr_point = numbers[i].copy()
+            del curr_point[0]
+            classification = classifier.test(curr_point, features)
+            if classification == numbers[i][0]:
+                right += 1
+            else:
+                wrong += 1
+            elapsed_time = time.time() - start_time
+            print(f"Trained and tested without point {i}, classified as {classification}, actual was {numbers[i][0]} and took {elapsed_time}s")
+
+
+        accuracy = right / (right + wrong)
+        print(f'Accuracy: {accuracy}, got {right}/{wrong + right} correct!')
 
 def Rate_Node() -> float:
     return random.random() * 100
@@ -61,8 +119,21 @@ def Backward_Elimination(feature_list: list[int], curr_features: list[int], curr
         return
     curr_features.remove(worst_index)
     Backward_Elimination(feature_list, curr_features, new_accuracy)
-    
 
+def Nearest_Neighbor():
+    testdata_path = input("Enter the path to the data you'd like to use: ")
+    test_features = input("Enter the features you'd like to test separated by spaces: ")
+    features = test_features.split()
+    features = list(map(int, features))
+    # credit to stack overflow for the code
+    with open(testdata_path, "r") as file:
+        lines = file.readlines()
+    numbers = [[]]
+    for line in lines:
+        numbers.extend([[float(x) for x in line.split()]])
+    del numbers[0]
+    validator = Validator()
+    validator.validate(numbers, features)
 
 def main():
     num_features = input("Please enter total number of features: ")
@@ -73,6 +144,7 @@ def main():
     print("\nPlease type the number of the algorithm you want to run")
     print("\n(1) Forward Selection")
     print("\n(2) Backward Elimination")
+    print("\n(3) Nearest Neighbor")
     selected_algorithm = int(input(""))
 
     match selected_algorithm:
@@ -81,6 +153,9 @@ def main():
 
         case 2:
             Backward_Elimination(feature_list, feature_list.copy(), 0)
+        
+        case 3:
+            Nearest_Neighbor()
 
 if __name__ == "__main__":
     main()
