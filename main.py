@@ -1,3 +1,24 @@
+"""
+Group:
+Alexander Dobmeier, adobm001, Section 24
+
+DatasetID: this was not mentioned anywhere else in the 
+  instructions and I have no idea what is supposed to go here
+
+Small Dataset Results:
+  Forward: Feature Subset: {4,2}, Acc: 92%
+  Backward: Feature Subset: {0, 1, 3, 4, 6, 8, 9}, Acc: 78%
+
+Large Dataset Results:
+  Forward: Feature Subset: {26, 0}, Acc: 95.5%
+  Backward: Feature Subset: {0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39}, Acc: 71.7%
+
+Titanic Dataset Results:
+  Forward: Feature Subset: {1}, Acc: 78.0%
+  Backward: Feature Subset: {0, 1, 3, 4}, Acc: 76.3%
+"""
+
+
 import random
 import math
 import numpy
@@ -35,12 +56,12 @@ class Classifier:
 
 class Validator:
     def validate(self, numbers, features):
+        start_time = time.time()
         right = 0
         wrong = 0
 
         classifier = Classifier()
         for i in range(len(numbers)):
-            start_time = time.time()
             curr_testdata = numbers.copy()
             del curr_testdata[i]
             classifier.train(curr_testdata)
@@ -51,17 +72,17 @@ class Validator:
                 right += 1
             else:
                 wrong += 1
-            elapsed_time = time.time() - start_time
-            print(f"Trained and tested without point {i}, classified as {classification}, actual was {numbers[i][0]} and took {elapsed_time}s")
+            # print(f"Trained and tested without point {i}, classified as {classification}, actual was {numbers[i][0]} and took {elapsed_time}s")
 
-
+        elapsed_time = time.time() - start_time
         accuracy = right / (right + wrong)
-        print(f'Accuracy: {accuracy}, got {right}/{wrong + right} correct!')
+        print(f'Accuracy: {accuracy}, got {right}/{wrong + right} correct!  Took {elapsed_time}s')
+        return accuracy
 
 def Rate_Node() -> float:
     return random.random() * 100
 
-def Forward_Selection(feature_list, curr_features, curr_accuracy):
+def Forward_Selection(raw_data, feature_list, curr_features, curr_accuracy):
     if len(feature_list) == len(curr_features):
         print(f"Finished search!  The subset {curr_features} is best with accuracy {curr_accuracy}")
         return
@@ -70,8 +91,9 @@ def Forward_Selection(feature_list, curr_features, curr_accuracy):
     for i in feature_list:
         if i in curr_features:
             continue
-        accuracy = Rate_Node()
         curr_features.append(i)
+        validatussy = Validator()
+        accuracy = validatussy.validate(raw_data, curr_features)
         print(f"Using feature(s) {curr_features} accuracy is {accuracy}")
         curr_features.pop()
         if accuracy > best_accuracy:
@@ -84,12 +106,12 @@ def Forward_Selection(feature_list, curr_features, curr_accuracy):
     else:
         curr_features.append(best_index)
         print(f"Feature set {curr_features} is the best, accuracy was {best_accuracy}")
-        Forward_Selection(feature_list, curr_features, best_accuracy)
+        Forward_Selection(raw_data, feature_list, curr_features, best_accuracy)
         
 
     
 
-def Backward_Elimination(feature_list: list[int], curr_features: list[int], curr_accuracy):
+def Backward_Elimination(raw_data, feature_list: list[int], curr_features: list[int], curr_accuracy):
     if len(curr_features) == 1:
         print(f"Finished search!  The subset{curr_features} is the best with accuracy {curr_accuracy}")
         return
@@ -99,43 +121,47 @@ def Backward_Elimination(feature_list: list[int], curr_features: list[int], curr
         return
     if len(feature_list) == len(curr_features):
         curr_accuracy = 0
-    worst_accuracy = 101.0
-    worst_index = 0
+    highest_accuracy = 0
+    highest_index = 0
     for i, j in enumerate(curr_features):
         if i not in curr_features:
             continue
-        accuracy = Rate_Node()
-        print(f"Feature {j}'s impact is {accuracy}")
-        if accuracy < worst_accuracy:
-            worst_accuracy = accuracy
-            worst_index = i
-    gain = random.random() * 40
-    print(f"CURR = {curr_accuracy}, GAIN = {gain}")
-    new_accuracy = curr_accuracy + gain
-    print(f"Dropping feature {curr_features[worst_index]}, new accuracy is {new_accuracy}")
-    if new_accuracy - curr_accuracy < 5:
+        test_features = curr_features.copy()
+        test_features.remove(i)
+        validatussy = Validator()
+        accuracy = validatussy.validate(raw_data, test_features)
+        print(f"Accuracy without feature {j} is {accuracy}")
+        if accuracy > highest_accuracy:
+            highest_accuracy = accuracy
+            highest_index = i
+    highest_loss = highest_accuracy - curr_accuracy
+    print(f"CURR = {curr_accuracy}, LOSS = {highest_loss}")
+    new_accuracy = highest_accuracy
+    print(f"Dropping feature {curr_features[highest_index]}, new accuracy is {new_accuracy}, loss is {highest_loss}")
+    if highest_loss < 0.01:
         print(f"Accuracy gain < 5%, search complete")
         print(f"Best features are {curr_features} and accuracy is {curr_accuracy}")
         return
-    curr_features.remove(worst_index)
-    Backward_Elimination(feature_list, curr_features, new_accuracy)
+    curr_features.remove(highest_index)
+    Backward_Elimination(raw_data, feature_list, curr_features, new_accuracy)
 
-def Nearest_Neighbor():
-    testdata_path = input("Enter the path to the data you'd like to use: ")
-    test_features = input("Enter the features you'd like to test separated by spaces: ")
-    features = test_features.split()
-    features = list(map(int, features))
+def Nearest_Neighbor(testdata_path, test_features):
+    # testdata_path = input("Enter the path to the data you'd like to use: ")
+    # test_features = input("Enter the features you'd like to test separated by spaces: ")
+    # features = test_features.split()
+    # features = list(map(int, features))
     # credit to stack overflow for the code
-    with open(testdata_path, "r") as file:
-        lines = file.readlines()
-    numbers = [[]]
-    for line in lines:
-        numbers.extend([[float(x) for x in line.split()]])
-    del numbers[0]
     validator = Validator()
-    validator.validate(numbers, features)
+    # validator.validate(numbers, test_features)
 
 def main():
+    testdata_path = input("Enter the path to the data you'd like to use: ")
+    with open(testdata_path, "r") as file:
+        lines = file.readlines()
+    raw_data = [[]]
+    for line in lines:
+        raw_data.extend([[float(x) for x in line.split()]])
+    del raw_data[0]
     num_features = input("Please enter total number of features: ")
     feature_list = []
     for i in range(int(num_features)):
@@ -149,10 +175,10 @@ def main():
 
     match selected_algorithm:
         case 1:
-            Forward_Selection(feature_list, [], 0)
+            Forward_Selection(raw_data, feature_list, [], 0)
 
         case 2:
-            Backward_Elimination(feature_list, feature_list.copy(), 0)
+            Backward_Elimination(raw_data, feature_list, feature_list.copy(), 0)
         
         case 3:
             Nearest_Neighbor()
